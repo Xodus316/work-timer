@@ -1,0 +1,22 @@
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:///./data/work_timer.db
+    volumes:
+      # Source mounted for hot reload; data dir bind-mounted so the SQLite file persists.
+      - ./backend/app:/app/app
+      - ./backend/data:/app/data
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      # Source mounted for HMR; anonymous volume keeps the container's node_modules.
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
