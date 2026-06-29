@@ -4,6 +4,7 @@ import { api } from '../api'
 import type { Project, Task } from '../types'
 import TaskRow from '../components/TaskRow'
 import TaskForm from '../components/TaskForm'
+import ProjectCalendar from '../components/ProjectCalendar'
 import { notifyTimerChange } from '../timerEvents'
 
 interface Baseline {
@@ -156,6 +157,8 @@ export default function ProjectDetailPage() {
           ))}
         </ul>
       )}
+
+      <ProjectCalendar projectId={id} />
     </div>
   )
 }

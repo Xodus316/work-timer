@@ -83,3 +83,24 @@ class TaskRead(SQLModel):
     is_running: bool
     completed: bool
     created_at: datetime
+
+
+# --- TimeEntry -------------------------------------------------------------
+# One row per completed work session, written whenever a running timer stops.
+# Enables per-day aggregation (the project calendar).
+class TimeEntry(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    task_id: int = Field(foreign_key="task.id", index=True)
+    project_id: int = Field(foreign_key="project.id", index=True)
+    seconds: int
+    started_at: datetime = Field(index=True)
+    ended_at: datetime
+
+
+class TimeEntryRead(SQLModel):
+    id: int
+    task_id: int
+    seconds: int
+    # ISO-8601 UTC strings (with offset) so the browser can bucket by local day.
+    started_at: str
+    ended_at: str

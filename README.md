@@ -10,6 +10,7 @@ a project.
 - **Backend:** Python + FastAPI (SQLModel)
 - **Storage:** local SQLite file (`backend/data/work_timer.db`), persisted on the host
 - **Run:** Docker Compose (both services, with hot reload)
+- **Backups:** daily SQLite snapshots (see [Backups](#backups))
 
 ## Running the app
 
@@ -41,6 +42,49 @@ rebuilds. Delete that file to start fresh.
 - **One timer at a time:** starting a task's timer automatically stops any other running task, so
   you never double-count time.
 
+## Backups
+
+A daily snapshot of the SQLite database is taken by [`scripts/backup_db.py`](scripts/backup_db.py),
+which uses SQLite's online backup API — safe to run even while the app is writing. Snapshots are
+written to `backups/` (gitignored) as `work_timer-<date>_<time>.db`, keeping the most recent **14**
+and pruning older ones.
+
+**Back up right now:**
+
+```bash
+python3 scripts/backup_db.py
+```
+
+**Schedule it daily at 2 AM (macOS)** — install the included LaunchAgent:
+
+```bash
+cp scripts/com.worktimer.backup.plist ~/Library/LaunchAgents/
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.worktimer.backup.plist
+```
+
+The paths inside the plist are absolute — edit them if the project lives somewhere else. If the
+Mac is asleep at 2 AM, the job runs at next wake. Output is logged to `backups/backup.log`.
+
+**Restore from a backup** — stop the app so nothing's writing, swap the file in, restart:
+
+```bash
+docker compose down
+cp backups/work_timer-2026-06-29_132535.db backend/data/work_timer.db   # pick the snapshot you want
+docker compose up -d
+```
+
+**Manage the schedule:**
+
+```bash
+launchctl kickstart -k gui/$(id -u)/com.worktimer.backup     # run on demand
+launchctl bootout gui/$(id -u)/com.worktimer.backup          # turn it off
+rm ~/Library/LaunchAgents/com.worktimer.backup.plist
+```
+
+Two optional environment variables tune the script: `WORKTIMER_BACKUP_DIR` (where snapshots go —
+e.g. point it at an iCloud Drive folder for off-machine safety) and `WORKTIMER_BACKUP_KEEP` (how
+many snapshots to retain).
+
 ## Project structure
 
 ```
@@ -49,14 +93,16 @@ backend/                # FastAPI app (app/), Dockerfile, requirements.txt
   app/
     main.py             # app + CORS + routers
     database.py         # SQLModel engine (DB path from DATABASE_URL)
-    models.py           # Company, Project, Task
-    routers/            # companies, projects, tasks (+ start/stop)
+    models.py           # Company, Project, Task, TimeEntry
+    routers/            # companies, projects, tasks (+ start/stop/complete), time-entries
   data/                 # SQLite file lives here (bind-mounted, gitignored)
 frontend/               # Vite React-TS app, Dockerfile
   src/
     api.ts, types.ts
     pages/              # ProjectsPage, ProjectDetailPage
-    components/         # AddProjectForm, TaskForm, TaskRow
+    components/         # AddProjectForm, TaskForm, TaskRow, ProjectCalendar, TabTimer
+scripts/                # backup_db.py + LaunchAgent plist (daily DB backups)
+backups/                # daily SQLite snapshots (gitignored)
 ```
 
 ## Running without Docker (optional)

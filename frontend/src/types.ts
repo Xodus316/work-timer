@@ -22,3 +22,11 @@ export interface Task {
   completed: boolean
   created_at: string
 }
+
+export interface TimeEntry {
+  id: number
+  task_id: number
+  seconds: number
+  started_at: string // ISO-8601 UTC
+  ended_at: string // ISO-8601 UTC
+}

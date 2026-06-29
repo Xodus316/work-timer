@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 
 from ..database import get_session
-from ..models import Company, Project, ProjectCreate, ProjectRead, Task
+from ..models import Company, Project, ProjectCreate, ProjectRead, Task, TimeEntry
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
@@ -57,9 +57,13 @@ def delete_project(project_id: int, session: Session = Depends(get_session)):
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    # Cascade: remove the project's tasks first (FK enforcement is off for SQLite).
-    tasks = session.exec(select(Task).where(Task.project_id == project_id)).all()
-    for task in tasks:
+    # Cascade: remove the project's time entries and tasks first
+    # (FK enforcement is off for SQLite).
+    for entry in session.exec(
+        select(TimeEntry).where(TimeEntry.project_id == project_id)
+    ).all():
+        session.delete(entry)
+    for task in session.exec(select(Task).where(Task.project_id == project_id)).all():
         session.delete(task)
 
     session.delete(project)

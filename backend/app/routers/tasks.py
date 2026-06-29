@@ -4,17 +4,29 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 
 from ..database import get_session
-from ..models import Project, Task, TaskCreate, TaskRead, TaskUpdate, utcnow
+from ..models import Project, Task, TaskCreate, TaskRead, TaskUpdate, TimeEntry, utcnow
 
 router = APIRouter(tags=["tasks"])
 
 
-def _commit_running(task: Task) -> None:
-    """Fold any in-progress running time into total_seconds and stop the task."""
+def _commit_running(task: Task, session: Session) -> None:
+    """Fold any in-progress running time into total_seconds, record a TimeEntry
+    for the session, and stop the task."""
     if task.running_since is not None:
-        delta = int((utcnow() - task.running_since).total_seconds())
+        started = task.running_since
+        ended = utcnow()
+        delta = int((ended - started).total_seconds())
         if delta > 0:
             task.total_seconds += delta
+            session.add(
+                TimeEntry(
+                    task_id=task.id,
+                    project_id=task.project_id,
+                    seconds=delta,
+                    started_at=started,
+                    ended_at=ended,
+                )
+            )
         task.running_since = None
 
 
@@ -104,6 +116,8 @@ def update_task(task_id: int, data: TaskUpdate, session: Session = Depends(get_s
 @router.delete("/api/tasks/{task_id}", status_code=204)
 def delete_task(task_id: int, session: Session = Depends(get_session)):
     task = _get_task_or_404(task_id, session)
+    for entry in session.exec(select(TimeEntry).where(TimeEntry.task_id == task_id)).all():
+        session.delete(entry)
     session.delete(task)
     session.commit()
 
@@ -122,7 +136,7 @@ def start_task(task_id: int, session: Session = Depends(get_session)):
     running = session.exec(select(Task).where(Task.running_since.is_not(None))).all()
     for other in running:
         if other.id != task.id:
-            _commit_running(other)
+            _commit_running(other, session)
             session.add(other)
 
     if task.running_since is None:
@@ -137,7 +151,7 @@ def start_task(task_id: int, session: Session = Depends(get_session)):
 @router.post("/api/tasks/{task_id}/stop", response_model=TaskRead)
 def stop_task(task_id: int, session: Session = Depends(get_session)):
     task = _get_task_or_404(task_id, session)
-    _commit_running(task)
+    _commit_running(task, session)
     session.add(task)
     session.commit()
     session.refresh(task)
@@ -148,7 +162,7 @@ def stop_task(task_id: int, session: Session = Depends(get_session)):
 def complete_task(task_id: int, session: Session = Depends(get_session)):
     task = _get_task_or_404(task_id, session)
     # Stop the timer first so any in-progress time is recorded, then mark complete.
-    _commit_running(task)
+    _commit_running(task, session)
     task.completed = True
     session.add(task)
     session.commit()

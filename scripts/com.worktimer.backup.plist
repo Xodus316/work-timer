@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Reference copy of the daily-backup LaunchAgent.
+  Paths below are specific to this machine. To (re)install:
+
+    cp scripts/com.worktimer.backup.plist ~/Library/LaunchAgents/
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.worktimer.backup.plist
+
+  To remove:
+    launchctl bootout gui/$(id -u)/com.worktimer.backup
+    rm ~/Library/LaunchAgents/com.worktimer.backup.plist
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.worktimer.backup</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/opt/homebrew/bin/python3</string>
+        <string>/Users/alexanderhenry/projects/work-timer/scripts/backup_db.py</string>
+    </array>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>2</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/alexanderhenry/projects/work-timer/backups/backup.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/alexanderhenry/projects/work-timer/backups/backup.log</string>
+</dict>
+</plist>
