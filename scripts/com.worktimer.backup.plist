@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   Reference copy of the daily-backup LaunchAgent.
-  Paths below are specific to this machine. To (re)install:
+  Replace /path/to/work-timer below with the absolute path to your clone
+  (launchd requires absolute paths). To (re)install:
 
     cp scripts/com.worktimer.backup.plist ~/Library/LaunchAgents/
+    # edit the paths in the copy, then:
     launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.worktimer.backup.plist
 
   To remove:
@@ -18,7 +20,7 @@
     <key>ProgramArguments</key>
     <array>
         <string>/opt/homebrew/bin/python3</string>
-        <string>/Users/alexanderhenry/projects/work-timer/scripts/backup_db.py</string>
+        <string>/path/to/work-timer/scripts/backup_db.py</string>
     </array>
 
     <key>StartCalendarInterval</key>
@@ -30,8 +32,8 @@
     </dict>
 
     <key>StandardOutPath</key>
-    <string>/Users/alexanderhenry/projects/work-timer/backups/backup.log</string>
+    <string>/path/to/work-timer/backups/backup.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/alexanderhenry/projects/work-timer/backups/backup.log</string>
+    <string>/path/to/work-timer/backups/backup.log</string>
 </dict>
 </plist>

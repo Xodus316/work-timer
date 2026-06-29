@@ -12,6 +12,20 @@ a project.
 - **Run:** Docker Compose (both services, with hot reload)
 - **Backups:** daily SQLite snapshots (see [Backups](#backups))
 
+## Features
+
+- **Projects & companies** — add and delete projects; each belongs to a company picked from a
+  dropdown you can extend inline while creating a project.
+- **Tasks** — add, edit, and delete tasks within a project. Tasks are what you time.
+- **Timer** — start/stop a timer on any task; it accumulates a running total. Only one task runs
+  at a time (starting one stops any other), so you never double-count.
+- **Complete / reopen** — mark a task complete to lock its timer and edit controls; an
+  *Add more time* button reopens it. Accumulated time is preserved.
+- **Live tab title** — while a timer runs, the browser tab shows the elapsed time, so you can
+  keep an eye on it from another tab.
+- **Project calendar** — a monthly view on each project page showing hours worked per day.
+- **Daily backups** — automatic, consistent SQLite snapshots (see [Backups](#backups)).
+
 ## Running the app
 
 You need Docker + Docker Compose. From the project root:
@@ -41,6 +55,14 @@ rebuilds. Delete that file to start fresh.
   live display. This means the timer keeps counting even if you reload or close the browser.
 - **One timer at a time:** starting a task's timer automatically stops any other running task, so
   you never double-count time.
+- **Completing a task** stops its timer and hides its Start/Edit controls; reopening with *Add
+  more time* brings them back. The accumulated total is kept.
+- **Per-day history & calendar:** whenever a timer stops, a `TimeEntry` (task, project, seconds,
+  start/end) is written. The project calendar aggregates these into hours-per-day, bucketed into
+  your browser's local timezone. In-progress time appears once you stop, and time accumulated
+  before this feature existed has no daily breakdown.
+- **Tab title:** a small global component polls the running task and updates the browser tab
+  title every second, so the live timer is visible from any tab.
 
 ## Backups
 
@@ -62,8 +84,9 @@ cp scripts/com.worktimer.backup.plist ~/Library/LaunchAgents/
 launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.worktimer.backup.plist
 ```
 
-The paths inside the plist are absolute — edit them if the project lives somewhere else. If the
-Mac is asleep at 2 AM, the job runs at next wake. Output is logged to `backups/backup.log`.
+The plist uses placeholder paths (`/path/to/work-timer/…`) — replace them with your clone's
+absolute path before installing (launchd requires absolute paths). If the Mac is asleep at 2 AM,
+the job runs at next wake. Output is logged to `backups/backup.log`.
 
 **Restore from a backup** — stop the app so nothing's writing, swap the file in, restart:
 
