@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { api } from '../api'
 import type { Company, Project } from '../types'
 import AddProjectForm from '../components/AddProjectForm'
+import DashboardCalendar from '../components/DashboardCalendar'
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([])
@@ -84,6 +85,8 @@ export default function ProjectsPage() {
           ))}
         </ul>
       )}
+
+      <DashboardCalendar />
     </div>
   )
 }

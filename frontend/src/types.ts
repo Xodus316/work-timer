@@ -30,3 +30,11 @@ export interface TimeEntry {
   started_at: string // ISO-8601 UTC
   ended_at: string // ISO-8601 UTC
 }
+
+export interface TimeEntryWithProject {
+  id: number
+  project_id: number
+  project_name: string
+  seconds: number
+  started_at: string // ISO-8601 UTC
+}

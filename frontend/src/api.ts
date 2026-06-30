@@ -1,4 +1,10 @@
-import type { Company, Project, Task, TimeEntry } from './types'
+import type {
+  Company,
+  Project,
+  Task,
+  TimeEntry,
+  TimeEntryWithProject,
+} from './types'
 
 const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
@@ -47,6 +53,12 @@ export const api = {
   getTimeEntries: (projectId: number, startIso: string, endIso: string) =>
     request<TimeEntry[]>(
       `/api/projects/${projectId}/time-entries?start=${encodeURIComponent(
+        startIso,
+      )}&end=${encodeURIComponent(endIso)}`,
+    ),
+  getAllTimeEntries: (startIso: string, endIso: string) =>
+    request<TimeEntryWithProject[]>(
+      `/api/time-entries?start=${encodeURIComponent(
         startIso,
       )}&end=${encodeURIComponent(endIso)}`,
     ),

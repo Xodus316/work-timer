@@ -13,14 +13,17 @@ import {
   WEEKDAYS,
 } from '../calendar'
 
-interface Props {
+interface ProjectTotal {
   projectId: number
+  name: string
+  seconds: number
 }
 
-/** Monthly calendar of hours worked per day on a single project. */
-export default function ProjectCalendar({ projectId }: Props) {
+/** Monthly calendar of hours per day across ALL projects; each day lists its
+ * projects as "<Project> - <time worked>". */
+export default function DashboardCalendar() {
   const [view, setView] = useState(currentMonthView())
-  const [byDay, setByDay] = useState<Record<number, number>>({})
+  const [byDay, setByDay] = useState<Record<number, ProjectTotal[]>>({})
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -29,16 +32,33 @@ export default function ProjectCalendar({ projectId }: Props) {
     async function load() {
       const { startIso, endIso } = monthRangeUtc(view)
       try {
-        const entries = await api.getTimeEntries(projectId, startIso, endIso)
+        const entries = await api.getAllTimeEntries(startIso, endIso)
         if (cancelled) return
-        const buckets: Record<number, number> = {}
+        // day -> projectId -> running total
+        const days: Record<number, Record<number, ProjectTotal>> = {}
         for (const e of entries) {
           const d = new Date(e.started_at)
-          if (d.getFullYear() === view.year && d.getMonth() === view.month) {
-            buckets[d.getDate()] = (buckets[d.getDate()] ?? 0) + e.seconds
+          if (d.getFullYear() !== view.year || d.getMonth() !== view.month) continue
+          const day = d.getDate()
+          const byProject = (days[day] ??= {})
+          const cur = byProject[e.project_id]
+          if (cur) {
+            cur.seconds += e.seconds
+          } else {
+            byProject[e.project_id] = {
+              projectId: e.project_id,
+              name: e.project_name,
+              seconds: e.seconds,
+            }
           }
         }
-        setByDay(buckets)
+        const result: Record<number, ProjectTotal[]> = {}
+        for (const [day, byProject] of Object.entries(days)) {
+          result[Number(day)] = Object.values(byProject).sort(
+            (a, b) => b.seconds - a.seconds,
+          )
+        }
+        setByDay(result)
         setError(null)
       } catch (err) {
         if (!cancelled) setError((err as Error).message)
@@ -51,13 +71,16 @@ export default function ProjectCalendar({ projectId }: Props) {
       cancelled = true
       window.removeEventListener(TIMER_CHANGE_EVENT, load)
     }
-  }, [projectId, view])
+  }, [view])
 
   const cells = buildMonthCells(view)
-  const monthTotal = Object.values(byDay).reduce((a, b) => a + b, 0)
+  const monthTotal = Object.values(byDay).reduce(
+    (sum, list) => sum + list.reduce((s, p) => s + p.seconds, 0),
+    0,
+  )
 
   return (
-    <section className="calendar">
+    <section className="calendar dashboard">
       <div className="calendar-header">
         <button
           className="btn icon"
@@ -71,7 +94,9 @@ export default function ProjectCalendar({ projectId }: Props) {
             {MONTHS[view.month]} {view.year}
           </h2>
           {monthTotal > 0 && (
-            <span className="calendar-total">{formatHours(monthTotal)} this month</span>
+            <span className="calendar-total">
+              {formatHours(monthTotal)} across all projects
+            </span>
           )}
         </div>
         <div className="calendar-nav">
@@ -98,16 +123,32 @@ export default function ProjectCalendar({ projectId }: Props) {
         ))}
         {cells.map((d, i) => {
           if (d === null) return <div key={`b${i}`} className="calendar-day empty" />
-          const secs = byDay[d] ?? 0
+          const projects = byDay[d] ?? []
           return (
             <div
               key={d}
-              className={`calendar-day${secs > 0 ? ' worked' : ''}${
+              className={`calendar-day${projects.length ? ' worked' : ''}${
                 isToday(view, d) ? ' today' : ''
               }`}
             >
               <span className="calendar-date">{d}</span>
-              {secs > 0 && <span className="calendar-hours">{formatHours(secs)}</span>}
+              {projects.length > 0 && (
+                <ul className="calendar-projects">
+                  {projects.map((p) => (
+                    <li
+                      key={p.projectId}
+                      className="calendar-project"
+                      title={`${p.name} - ${formatHours(p.seconds)}`}
+                    >
+                      <span className="calendar-project-name">{p.name}</span>
+                      <span className="calendar-project-time">
+                        {' - '}
+                        {formatHours(p.seconds)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           )
         })}

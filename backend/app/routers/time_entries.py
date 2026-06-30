@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 
 from ..database import get_session
-from ..models import Project, TimeEntry, TimeEntryRead
+from ..models import Project, TimeEntry, TimeEntryRead, TimeEntryWithProjectRead
 
 router = APIRouter(tags=["time-entries"])
 
@@ -21,6 +21,34 @@ def _to_naive_utc(dt: datetime) -> datetime:
 def _utc_iso(dt: datetime) -> str:
     """Render a stored naive-UTC datetime as an explicit UTC ISO string."""
     return dt.replace(tzinfo=timezone.utc).isoformat()
+
+
+@router.get("/api/time-entries", response_model=list[TimeEntryWithProjectRead])
+def list_all_time_entries(
+    start: Optional[datetime] = None,
+    end: Optional[datetime] = None,
+    session: Session = Depends(get_session),
+):
+    """Work sessions across ALL projects, each tagged with its project name,
+    optionally bounded by [start, end) on the session's start time. Powers the
+    dashboard calendar."""
+    query = select(TimeEntry, Project).join(Project)
+    if start is not None:
+        query = query.where(TimeEntry.started_at >= _to_naive_utc(start))
+    if end is not None:
+        query = query.where(TimeEntry.started_at < _to_naive_utc(end))
+
+    rows = session.exec(query.order_by(TimeEntry.started_at)).all()
+    return [
+        TimeEntryWithProjectRead(
+            id=entry.id,
+            project_id=entry.project_id,
+            project_name=project.name,
+            seconds=entry.seconds,
+            started_at=_utc_iso(entry.started_at),
+        )
+        for entry, project in rows
+    ]
 
 
 @router.get(

@@ -104,3 +104,13 @@ class TimeEntryRead(SQLModel):
     # ISO-8601 UTC strings (with offset) so the browser can bucket by local day.
     started_at: str
     ended_at: str
+
+
+class TimeEntryWithProjectRead(SQLModel):
+    """A time entry across all projects, with its project name — for the
+    dashboard calendar."""
+    id: int
+    project_id: int
+    project_name: str
+    seconds: int
+    started_at: str
