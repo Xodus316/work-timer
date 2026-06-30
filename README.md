@@ -131,7 +131,9 @@ While a timer is active the menu bar shows `⏱ HH:MM:SS`; the dropdown lists th
    plugin into your existing plugins folder). Keep the file executable.
 
 The `.1s.` in the filename sets the refresh rate (once per second) — rename to `work-timer.2s.py`
-etc. to poll less often. The plugin uses only the Python standard library.
+etc. to poll less often. The plugin uses only the Python standard library and connects to
+`http://127.0.0.1:8000` by default. Set `WORKTIMER_API` or `WORKTIMER_APP_URL` in SwiftBar's
+environment if you run the backend or frontend somewhere else.
 
 ## Project structure
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # <xbar.title>Work Timer</xbar.title>
-# <xbar.version>v1.0</xbar.version>
+# <xbar.version>v1.1</xbar.version>
 # <xbar.author>Work Timer</xbar.author>
 # <xbar.desc>Shows the currently running Work Timer task in the macOS menu bar.</xbar.desc>
 # <xbar.dependencies>python3</xbar.dependencies>
@@ -11,23 +11,21 @@
 """
 SwiftBar / xbar plugin: show the running Work Timer task in the macOS menu bar.
 
-Install:
-  1. brew install --cask swiftbar      (or use xbar — same plugin format)
-  2. Launch SwiftBar; when it asks for a plugin folder, either point it at this
-     "scripts/menubar" folder, or symlink this file into your existing one:
-        ln -s "$PWD/scripts/menubar/work-timer.1s.py" <your-swiftbar-plugin-folder>/
-  3. Keep the file executable (chmod +x). The ".1s." in the name = refresh once
-     per second; rename to e.g. work-timer.2s.py to poll less often.
+SwiftBar re-runs this on the interval in the filename (work-timer.1s.py = every
+second) and shows the output. Each run reads the live elapsed time from the
+backend, so the menu bar reflects the server's value.
 
-The menu bar shows the live elapsed time; the dropdown lets you stop the timer
-or open the app. Uses only the Python standard library, so the system python3
-works fine.
+Install: point SwiftBar's plugin folder at this "scripts/menubar" folder (or
+symlink this file into your existing one), keep it executable, and Refresh All /
+relaunch SwiftBar. Needs the backend running (http://127.0.0.1:8000 by default).
+Standard library only, so the system python3 works.
 """
 import json
+import os
 import urllib.request
 
-API = "http://localhost:8000"
-APP_URL = "http://localhost:5173"
+API = os.environ.get("WORKTIMER_API", "http://127.0.0.1:8000").rstrip("/")
+APP_URL = os.environ.get("WORKTIMER_APP_URL", "http://127.0.0.1:5173").rstrip("/")
 
 
 def fmt(total: int) -> str:
@@ -65,9 +63,6 @@ def main() -> None:
         return
 
     elapsed = task["elapsed_seconds"]
-
-    # Menu bar title: just the running clock (kept short so it doesn't crowd the
-    # menu bar). The task name is in the dropdown below.
     print(f"⏱ {fmt(elapsed)}")
     print("---")
     print(task["name"])
