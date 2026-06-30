@@ -23,8 +23,11 @@ a project.
   *Add more time* button reopens it. Accumulated time is preserved.
 - **Live tab title** — while a timer runs, the browser tab shows the elapsed time, so you can
   keep an eye on it from another tab.
-- **Project calendar** — a monthly view on each project page showing hours worked per day.
+- **Project calendar** — a monthly view on each project page showing hours worked per day, plus
+  an all-projects calendar on the dashboard.
 - **Daily backups** — automatic, consistent SQLite snapshots (see [Backups](#backups)).
+- **Menu bar timer (macOS)** — show the running timer in the menu bar via a SwiftBar plugin
+  (see [Menu bar timer](#menu-bar-timer-macos)).
 
 ## Running the app
 
@@ -108,6 +111,28 @@ Two optional environment variables tune the script: `WORKTIMER_BACKUP_DIR` (wher
 e.g. point it at an iCloud Drive folder for off-machine safety) and `WORKTIMER_BACKUP_KEEP` (how
 many snapshots to retain).
 
+## Menu bar timer (macOS)
+
+Show the currently running timer in the macOS menu bar with
+[`scripts/menubar/work-timer.1s.py`](scripts/menubar/work-timer.1s.py) — a
+[SwiftBar](https://github.com/swiftbar/SwiftBar) plugin (also works with xbar). It reads the
+`/api/tasks/running` endpoint, so it only needs the backend running.
+
+While a timer is active the menu bar shows `⏱ HH:MM:SS`; the dropdown lists the task with a
+**Stop timer** action and an **Open Work Timer** link. When idle it's a single `⏱`.
+
+1. Install SwiftBar:
+
+   ```bash
+   brew install --cask swiftbar
+   ```
+
+2. Launch it and, when asked for a plugins folder, point it at `scripts/menubar/` (or symlink the
+   plugin into your existing plugins folder). Keep the file executable.
+
+The `.1s.` in the filename sets the refresh rate (once per second) — rename to `work-timer.2s.py`
+etc. to poll less often. The plugin uses only the Python standard library.
+
 ## Project structure
 
 ```
@@ -123,8 +148,8 @@ frontend/               # Vite React-TS app, Dockerfile
   src/
     api.ts, types.ts
     pages/              # ProjectsPage, ProjectDetailPage
-    components/         # AddProjectForm, TaskForm, TaskRow, ProjectCalendar, TabTimer
-scripts/                # backup_db.py + LaunchAgent plist (daily DB backups)
+    components/         # AddProjectForm, TaskForm, TaskRow, ProjectCalendar, DashboardCalendar, TabTimer
+scripts/                # backup_db.py + LaunchAgent (backups); menubar/ SwiftBar plugin
 backups/                # daily SQLite snapshots (gitignored)
 ```
 

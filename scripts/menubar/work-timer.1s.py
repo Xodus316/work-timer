@@ -1,0 +1,86 @@
+#!/usr/bin/env python3
+# <xbar.title>Work Timer</xbar.title>
+# <xbar.version>v1.0</xbar.version>
+# <xbar.author>Work Timer</xbar.author>
+# <xbar.desc>Shows the currently running Work Timer task in the macOS menu bar.</xbar.desc>
+# <xbar.dependencies>python3</xbar.dependencies>
+# <swiftbar.hideAbout>true</swiftbar.hideAbout>
+# <swiftbar.hideRunInTerminal>true</swiftbar.hideRunInTerminal>
+# <swiftbar.hideLastUpdated>true</swiftbar.hideLastUpdated>
+# <swiftbar.hideDisablePlugin>true</swiftbar.hideDisablePlugin>
+"""
+SwiftBar / xbar plugin: show the running Work Timer task in the macOS menu bar.
+
+Install:
+  1. brew install --cask swiftbar      (or use xbar — same plugin format)
+  2. Launch SwiftBar; when it asks for a plugin folder, either point it at this
+     "scripts/menubar" folder, or symlink this file into your existing one:
+        ln -s "$PWD/scripts/menubar/work-timer.1s.py" <your-swiftbar-plugin-folder>/
+  3. Keep the file executable (chmod +x). The ".1s." in the name = refresh once
+     per second; rename to e.g. work-timer.2s.py to poll less often.
+
+The menu bar shows the live elapsed time; the dropdown lets you stop the timer
+or open the app. Uses only the Python standard library, so the system python3
+works fine.
+"""
+import json
+import urllib.request
+
+API = "http://localhost:8000"
+APP_URL = "http://localhost:5173"
+
+
+def fmt(total: int) -> str:
+    total = max(0, int(total))
+    return f"{total // 3600:02d}:{(total % 3600) // 60:02d}:{total % 60:02d}"
+
+
+def running_task():
+    """Return the running task dict, None if idle, or 'unreachable' on error."""
+    try:
+        with urllib.request.urlopen(f"{API}/api/tasks/running", timeout=2) as resp:
+            raw = resp.read().decode().strip()
+    except Exception:
+        return "unreachable"
+    if not raw or raw == "null":
+        return None
+    return json.loads(raw)
+
+
+def main() -> None:
+    task = running_task()
+
+    if task == "unreachable":
+        print("⏱ –")
+        print("---")
+        print("Work Timer backend not reachable | color=gray")
+        print(f"Open Work Timer | href={APP_URL}")
+        return
+
+    if task is None:
+        print("⏱")
+        print("---")
+        print("No timer running | color=gray")
+        print(f"Open Work Timer | href={APP_URL}")
+        return
+
+    elapsed = task["elapsed_seconds"]
+
+    # Menu bar title: just the running clock (kept short so it doesn't crowd the
+    # menu bar). The task name is in the dropdown below.
+    print(f"⏱ {fmt(elapsed)}")
+    print("---")
+    print(task["name"])
+    print(f"Running for {fmt(elapsed)} | color=gray")
+    print("---")
+    print(
+        "■ Stop timer | "
+        f"bash=/usr/bin/curl param1=-s param2=-X param3=POST "
+        f"param4={API}/api/tasks/{task['id']}/stop "
+        "terminal=false refresh=true"
+    )
+    print(f"Open Work Timer | href={APP_URL}")
+
+
+if __name__ == "__main__":
+    main()
